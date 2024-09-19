@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>서울 명소 스탬프 투어</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .container {
+            position: relative;
+            display: inline-block;
+        }
+        .container img {
+            width: 800px;
+            height: 600px;
+        }
+        .text-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        #message {
+            margin-top: 20px;
+        }
+        button {
+            display: block;
+            margin: 10px auto;
+        }
+        #buttons-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px;
+        }
+        .ride-button {
+            padding: 10px;
+            font-size: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+        }
+        .ride-button.stamped {
+            background-color: #28a745;
+            color: white;
+            pointer-events: none;
+        }
+        .ride-info {
+            display: none;
+            text-align: center;
+        }
+        .ride-info img {
+            width: 400px;
+            height: auto;
+        }
+        #footer {
+            margin-top: 30px;
+            font-size: 14px;
+        }
+        #congrats-page {
+            display: none;
+            text-align: center;
+        }
+        #closest-ride-text {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #ff0000; /* 가까운 명소 텍스트 색상 */
+        }
+    </style>
+</head>
+<body>
+    <h1>서울 명소 스탬프 투어</h1>
+    <div id="main-view">
+        <div class="container">
+            <img src="서울지도.jpg" alt="서울 명소 지도">
+            <div class="text-overlay" id="text-overlay">현재 위치: 로딩 중...</div>
+        </div>
+        <div id="current-location">
+            <p id="current-location-text">현재 위치: 로딩 중...</p>
+            <p id="closest-ride-text">가장 가까운 명소: 로딩 중...</p>
+        </div>
+        <div id="message"></div>
+        <div id="buttons-container"></div>
+    </div>
+
+    <div id="ride-info" class="ride-info">
+        <button id="back-button">뒤로가기</button>
+        <h2 id="ride-name"></h2>
+        <p id="ride-location"></p>
+        <img id="ride-image" src="" alt="명소 이미지">
+        <button id="stamp-button">스탬프 찍기</button>
+        <div id="stamp-message"></div>
+    </div>
+
+    <div id="congrats-page">
+        <h1>축하합니다!</h1>
+        <p>20개 이상의 명소를 인증했습니다! 서울 투어를 성공적으로 완료하셨습니다.</p>
+        <img src="축하이미지.jpg" alt="축하 이미지">
+        <button onclick="location.reload()">다시 시작하기</button>
+    </div>
+
+    <div id="footer">
+        <p>Made by 서울알리미</p>
+    </div>
+
+    <script>
+        const attractions = [
+            { name: '서울타워', latitude: 37.551169, longitude: 126.988227, location: '남산' },
+            { name: '경복궁', latitude: 37.579617, longitude: 126.977041, location: '종로구' },
+            { name: '북촌 한옥마을', latitude: 37.582603, longitude: 126.985419, location: '종로구' },
+            { name: '동대문 디자인 플라자 (DDP)', latitude: 37.566295, longitude: 127.009347, location: '동대문구' },
+            { name: '명동', latitude: 37.560908, longitude: 126.985042, location: '중구' },
+            { name: '롯데월드타워', latitude: 37.513272, longitude: 127.102948, location: '송파구' },
+            { name: '한강 공원', latitude: 37.519745, longitude: 126.940457, location: '한강' },
+            { name: '이태원', latitude: 37.534655, longitude: 126.994968, location: '용산구' },
+            { name: '창덕궁', latitude: 37.579349, longitude: 126.991103, location: '종로구' },
+            { name: '삼청동', latitude: 37.587336, longitude: 126.981567, location: '종로구' },
+            { name: '파주 롯데아울렛', latitude: 37.760028, longitude: 126.774601, location: '파주' },
+            { name: '청계천', latitude: 37.570322, longitude: 126.989269, location: '종로구' },
+            { name: '광화문', latitude: 37.575929, longitude: 126.976849, location: '종로구' },
+            { name: '남산골 한옥마을', latitude: 37.559673, longitude: 126.993886, location: '중구' },
+            { name: '서울숲', latitude: 37.544664, longitude: 127.037804, location: '성동구' },
+            { name: '국립중앙박물관', latitude: 37.523984, longitude: 126.980355, location: '용산구' },
+            { name: '덕수궁', latitude: 37.566319, longitude: 126.974747, location: '중구' },
+            { name: '성수동', latitude: 37.544888, longitude: 127.055987, location: '성동구' },
+            { name: '연남동', latitude: 37.560307, longitude: 126.924389, location: '마포구' },
+            { name: '홍대', latitude: 37.556259, longitude: 126.922436, location: '마포구' },
+            { name: '양화대교', latitude: 37.541622, longitude: 126.900382, location: '영등포구' },
+            { name: '봉은사', latitude: 37.514308, longitude: 127.057166, location: '강남구' },
+            { name: '올림픽공원', latitude: 37.516117, longitude: 127.121114, location: '송파구' },
+            { name: '서대문형무소역사관', latitude: 37.576008, longitude: 126.957132, location: '서대문구' },
+            { name: '여의도', latitude: 37.525416, longitude: 126.924748, location: '영등포구' },
+            { name: '63빌딩', latitude: 37.519532, longitude: 126.940484, location: '영등포구' },
+            { name: '낙산공원', latitude: 37.579761, longitude: 127.007436, location: '성북구' },
+            { name: '광장시장', latitude: 37.570442, longitude: 126.999473, location: '종로구' },
+            { name: '서울역', latitude: 37.555149, longitude: 126.970626, location: '중구' },
+            { name: 'DDP 전시관', latitude: 37.567986, longitude: 127.009385, location: '동대문구' },
+            { name: '건대입구', latitude: 37.540224, longitude: 127.069091, location: '광진구' },
+            { name: '목동중앙도서관', latitude: 37.527311, longitude: 126.872277, location: '양천구' },
+            { name: '목동 6단지 608동', latitude: 37.527311, longitude: 126.872277, location: '양천구' },
+            { name: '롯데월드', latitude: 37.511257, longitude: 127.098391, location: '송파구' },
+            { name: '서울대공원', latitude: 37.467401, longitude: 126.992129, location: '관악구' },
+            { name: '국립한글박물관', latitude: 37.541021, longitude: 126.988177, location: '용산구' },
+            { name: '선유도 공원', latitude: 37.526756, longitude: 126.894826, location: '영등포구' },
+            { name: '삼성동 코엑스', latitude: 37.511060, longitude: 127.058434, location: '강남구' },
+            { name: '아차산', latitude: 37.547370, longitude: 127.100215, location: '광진구' },
+            { name: '홍릉 수목원', latitude: 37.598890, longitude: 127.036920, location: '동대문구' },
+            { name: '여의도 한강공원', latitude: 37.525099, longitude: 126.927664, location: '영등포구' },
+            { name: '서울식물원', latitude: 37.566294, longitude: 127.084826, location: '강서구' },
+            { name: '상암동 디지털미디어시티', latitude: 37.575315, longitude: 126.891779, location: '마포구' },
+            { name: '서울공예박물관', latitude: 37.565094, longitude: 126.978088, location: '종로구' },
+            { name: '경희궁', latitude: 37.574195, longitude: 126.965018, location: '종로구' },
+            { name: '서울과학관', latitude: 37.545190, longitude: 126.949514, location: '관악구' },
+            { name: '서울역사박물관', latitude: 37.548221, longitude: 126.972052, location: '중구' },
+            { name: '남산타워', latitude: 37.551150, longitude: 126.988224, location: '중구' },
+            { name: '종묘', latitude: 37.574712, longitude: 126.997070, location: '종로구' },
+            { name: '서울시립미술관', latitude: 37.556568, longitude: 126.979874, location: '중구' },
+            { name: '올림픽기념관', latitude: 37.514568, longitude: 127.117896, location: '송파구' },
+            { name: '마포대교', latitude: 37.546313, longitude: 126.925752, location: '마포구' },
+            { name: '목동과학관', latitude: 37.525470, longitude: 126.864574, location: '양천구' },
+            { name: '중랑캠핑숲', latitude: 37.598064, longitude: 127.088726, location: '중랑구' },
+            { name: '한양도성', latitude: 37.576112, longitude: 126.991002, location: '종로구' },
+            { name: '창경궁', latitude: 37.577035, longitude: 126.993066, location: '종로구' },
+            { name: '서울어린이대공원', latitude: 37.550503, longitude: 127.079584, location: '광진구' },
+            { name: '양재시민의숲', latitude: 37.488425, longitude: 127.033777, location: '서초구' },
+            { name: '숭례문', latitude: 37.560352, longitude: 126.974486, location: '중구' },
+            { name: '롯데월드몰', latitude: 37.511388, longitude: 127.101049, location: '송파구' },
+            { name: '아차산 생태공원', latitude: 37.547864, longitude: 127.090432, location: '광진구' },
+            { name: '인사동', latitude: 37.579219, longitude: 126.988198, location: '종로구' },
+            { name: '서대문자연사박물관', latitude: 37.576488, longitude: 126.963142, location: '서대문구' },
+            { name: '청담동', latitude: 37.521445, longitude: 127.043034, location: '강남구' },
+            { name: '세종문화회관', latitude: 37.573863, longitude: 126.977829, location: '종로구' },
+            { name: '오륜대', latitude: 37.570069, longitude: 127.055030, location: '송파구' },
+            { name: '관악도서관', latitude: 37.478871, longitude: 126.952979, location: '관악구' },
+            { name: '구리한강시민공원', latitude: 37.611004, longitude: 127.122344, location: '구리시' },
+            { name: '용산전쟁기념관', latitude: 37.535196, longitude: 126.977069, location: '용산구' },
+            { name: '양천문화회관', latitude: 37.517116, longitude: 126.873786, location: '양천구' },
+            { name: '시청', latitude: 37.566732, longitude: 126.978564, location: '중구' },
+            { name: '가락시장', latitude: 37.496867, longitude: 127.122117, location: '송파구' },
+            { name: '우면산', latitude: 37.447322, longitude: 127.029860, location: '서초구' },
+            { name: '불광천', latitude: 37.590218, longitude: 126.929306, location: '은평구' },
+            { name: '상암동', latitude: 37.575315, longitude: 126.891779, location: '마포구' },
+            { name: '과천과학관', latitude: 37.446946, longitude: 126.993537, location: '과천시' },
+            { name: '태릉', latitude: 37.594358, longitude: 127.074647, location: '노원구' },
+            { name: '송파구청', latitude: 37.513013, longitude: 127.116496, location: '송파구' },
+            { name: '선릉', latitude: 37.509137, longitude: 127.045753, location: '강남구' },
+            { name: '잠실야구장', latitude: 37.513327, longitude: 127.085572, location: '송파구' },
+            { name: '봉천동', latitude: 37.480294, longitude: 126.965640, location: '관악구' },
+            { name: '면목동', latitude: 37.570789, longitude: 127.086691, location: '중랑구' },
+            { name: '신촌', latitude: 37.554577, longitude: 126.938194, location: '마포구' },
+            { name: '여의도공원', latitude: 37.527145, longitude: 126.926292, location: '영등포구' },
+            { name: '미아리', latitude: 37.605374, longitude: 127.032906, location: '성북구' },
+            { name: '금호동', latitude: 37.534149, longitude: 127.014099, location: '광진구' },
+            { name: '이촌동', latitude: 37.523972, longitude: 126.976196, location: '용산구' },
+            { name: '상계동', latitude: 37.654958, longitude: 127.083178, location: '노원구' },
+            { name: '여의도', latitude: 37.525416, longitude: 126.924748, location: '영등포구' },
+            { name: '가락동', latitude: 37.495482, longitude: 127.112650, location: '송파구' },
+            { name: '도봉산', latitude: 37.652100, longitude: 127.034201, location: '도봉구' },
+            { name: '상암동 DMC', latitude: 37.575348, longitude: 126.891817, location: '마포구' },
+            { name: '화곡동', latitude: 37.537108, longitude: 126.853215, location: '강서구' },
+            { name: '연세대학교', latitude: 37.558090, longitude: 126.935493, location: '신촌' }
+        ];
+
+        let stampedCount = 0;
+        const STAMP_DISTANCE = 0.1; // 인정 범위를 100미터로 설정
+
+        function setupButtons() {
+            const container = document.getElementById('buttons-container');
+            attractions.forEach((attraction) => {
+                const button = document.createElement('button');
+                button.className = 'ride-button';
+                button.innerText = attraction.name;
+                button.onclick = () => showAttractionInfo(attraction, button);
+                container.appendChild(button);
+            });
+        }
+
+        function showAttractionInfo(attraction, button) {
+            document.getElementById('main-view').style.display = 'none';
+            const attractionInfo = document.getElementById('ride-info');
+            attractionInfo.style.display = 'block';
+            
+            document.getElementById('ride-name').innerText = attraction.name;
+            document.getElementById('ride-location').innerText = `위치: ${attraction.location}`;
+            document.getElementById('ride-image').src = '명소.jpg';
+            document.getElementById('stamp-message').innerHTML = '';
+
+            document.getElementById('stamp-button').onclick = () => stampAttraction(attraction, button);
+            document.getElementById('back-button').onclick = () => {
+                attractionInfo.style.display = 'none';
+                document.getElementById('main-view').style.display = 'block';
+            };
+        }
+
+        function stampAttraction(attraction, button) {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const userLat = position.coords.latitude;
+                    const userLon = position.coords.longitude;
+                    const userLocation = `${userLat.toFixed(6)}, ${userLon.toFixed(6)}`;
+                    const distance = getDistance(userLat, userLon, attraction.latitude, attraction.longitude);
+                    const messageElement = document.getElementById('stamp-message');
+                    
+                    if (distance <= STAMP_DISTANCE) {
+                        messageElement.innerHTML = `성공! ${attraction.name} 인증되었습니다! 현재 위치: ${userLocation}`;
+                        button.classList.add('stamped');
+                        button.innerText = '인증됨';
+                        stampedCount++;
+                        checkCompletion();
+                    } else {
+                        messageElement.innerHTML = `인증 실패! 현재 위치: ${userLocation}`;
+                    }
+                }, () => {
+                    alert('위치 정보를 가져오는 데 실패했습니다.');
+                });
+            } else {
+                alert('위치 정보가 지원되지 않습니다.');
+            }
+        }
+
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // 지구의 반지름 (km)
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c * 1000; // m 단위로 반환
+        }
+
+        function toRad(value) {
+            return value * Math.PI / 180;
+        }
+
+        function checkCompletion() {
+            if (stampedCount >= 20) {
+                document.getElementById('main-view').style.display = 'none';
+                document.getElementById('ride-info').style.display = 'none';
+                document.getElementById('congrats-page').style.display = 'block';
+            }
+        }
+
+        function showCurrentLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const locationText = `현재 위치: ${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+                    document.getElementById('current-location-text').innerText = locationText;
+                    const overlay = document.getElementById('text-overlay');
+                    overlay.innerText = locationText;
+
+                    // 가장 가까운 명소 찾기
+                    const closestAttraction = getClosestAttraction(lat, lon);
+                    if (closestAttraction) {
+                        const closestDistance = getDistance(lat, lon, closestAttraction.latitude, closestAttraction.longitude);
+                        document.getElementById('closest-ride-text').innerText = `가장 가까운 명소: ${closestAttraction.name} (${closestDistance.toFixed(2)} m)`;
+                    }
+                }, () => {
+                    document.getElementById('current-location-text').innerText = '위치 정보를 가져오는 데 실패했습니다.';
+                    document.getElementById('text-overlay').innerText = '위치 정보를 가져오는 데 실패했습니다.';
+                });
+            } else {
+                document.getElementById('current-location-text').innerText = '위치 정보가 지원되지 않습니다.';
+                document.getElementById('text-overlay').innerText = '위치 정보가 지원되지 않습니다.';
+            }
+        }
+
+        function getClosestAttraction(lat, lon) {
+            let closestAttraction = null;
+            let closestDistance = Infinity;
+            attractions.forEach(attraction => {
+                const distance = getDistance(lat, lon, attraction.latitude, attraction.longitude);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestAttraction = attraction;
+                }
+            });
+            return closestAttraction;
+        }
+
+        window.onload = () => {
+            setupButtons();
+            showCurrentLocation();
+        };
+    </script>
+</body>
+</html>
